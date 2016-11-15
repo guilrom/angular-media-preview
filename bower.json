@@ -1,0 +1,24 @@
+{
+  "name": "angular-media-preview",
+  "version": "0.1.1",
+  "main": "dist/angular-media-preview.js",
+  "homepage": "https://github.com/codekraft-studio/angular-media-preview#readme"
+  "authors": [
+    "codekraft-studio"
+  ],
+  "description": "Don't let your users upload the wrong media!",
+  "keywords": [
+    "angularjs",
+    "media",
+    "preview",
+    "input",
+    "file"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },  
+  "dependencies": {
+    "angular": "^1.5.8"
+  },  
+  "license": "ISC"
+}
