@@ -1,145 +1,145 @@
 angular.module('angular-media-preview')
 
-.directive('mediaPreview', function($log, $document) {
+.directive('mediaPreview', function ($log, $document) {
 
-    var directive = {
-        restrict: 'E',
-        scope: { model: '=?' },
-        template:   '<input type="file" accept="image/*,video/*,audio/*" ng-model="model" />' +
-                    '<input type="button" ng-click="clearPreview()" value="X" />',
-        link: _link
+  var directive = {
+    restrict: 'E',
+    scope: { model: '=?' },
+    template:   '<input type="file" ng-hide="model" accept="image/*,video/*,audio/*" ng-model="model" ng-value="Parcourir"/>' +
+                '<input type="button" ng-show="model" ng-click="clearPreview()" value="(X) Annuler" title="Ne pas charger cette nouvelle image" />',
+    link: _link
+  };
+
+  return directive;
+
+  function _link (scope, elem, attrs) {
+
+    var $input = angular.element( elem.children().eq(0) );
+    // get the model controller
+    var ngModel = $input.controller('ngModel');
+
+    // the preview container
+    var container;
+
+    var fallbackImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAQAAAD9CzEMAAAA00lEQVR4Ae2XwQqDQAxEveinFD9e2MUfq6Cep7GnrPAg1JVCu5OTvEwe9FLtWlpqR6OyVn2aXbNGdX6KB4OLrmbRyIKsGsksWKsINhbUShM0wVcEk43CnAVY722mMEfBhPWD9mGOAlvBepSDwK1gPc5LASp8fbCJ81KACl9PNkOYo8CfKOtHUpijwJ841y1xToJy5VxXnLPgvUL1OAeBW4F6kKPAnYB6jKPAnYA68PZ/8EOCJtjvfvmdqwjSvR8gTz1YcCiytgs/TvLnvaDi/J2gCV63ZgZdEb12DwAAAABJRU5ErkJggg==';
+
+    // get custom class or set default
+    var previewClass = attrs.previewClass || 'media-preview';
+
+    // get custom class or set default
+    var containerClass = attrs.containerClass || 'media-container';
+
+    if ( typeof attrs.multiple !== 'undefined' && attrs.multiple != 'false' ) {
+      $input.attr('multiple', true);
     }
 
-    return directive;
+    // as default if nothing is specified or
+    // the element specified is not a valid html
+    // element: create the default media container
+    // and append before input element
+    if ( !attrs.previewContainer || ( !document.getElementById(attrs.previewContainer) &&
+      !angular.isElement(attrs.previewContainer) ) ) {
 
-    function _link(scope, elem, attrs) {
+      // create container
+      container = angular.element( document.createElement('div') );
 
-        var $input = angular.element( elem.children().eq(0) );
-        // get the model controller
-        var ngModel = $input.controller('ngModel');
+      // append before elem
+      elem.parent()[0].insertBefore(container[0], elem[0]);
 
-        // the preview container
-        var container;
+    } else {
 
-        var fallbackImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAQAAAD9CzEMAAAA00lEQVR4Ae2XwQqDQAxEveinFD9e2MUfq6Cep7GnrPAg1JVCu5OTvEwe9FLtWlpqR6OyVn2aXbNGdX6KB4OLrmbRyIKsGsksWKsINhbUShM0wVcEk43CnAVY722mMEfBhPWD9mGOAlvBepSDwK1gPc5LASp8fbCJ81KACl9PNkOYo8CfKOtHUpijwJ841y1xToJy5VxXnLPgvUL1OAeBW4F6kKPAnYB6jKPAnYA68PZ/8EOCJtjvfvmdqwjSvR8gTz1YcCiytgs/TvLnvaDi/J2gCV63ZgZdEb12DwAAAABJRU5ErkJggg==";
+      // get the container
+      container = angular.isElement(attrs.previewContainer) ? attrs.previewContainer :
+        angular.element(document.getElementById(attrs.previewContainer));
+    }
 
-        // get custom class or set default
-        var previewClass = attrs.previewClass || 'media-preview';
+    // add default class
+    container.addClass(containerClass);
 
-        // get custom class or set default
-        var containerClass = attrs.containerClass || 'media-container';
+    // the change function
+    function onChange (e) {
 
-        if( typeof attrs.multiple !== 'undefined' && attrs.multiple != 'false' ) {
-            $input.attr('multiple', true);
-        }
+      // get files from target
+      var files = $input[0].files;
 
-        // as default if nothing is specified or
-        // the element specified is not a valid html
-        // element: create the default media container
-        // and append before input element
-        if( !attrs.previewContainer || ( !document.getElementById(attrs.previewContainer) && !angular.isElement(attrs.previewContainer) ) ) {
+      // update model value
+      attrs.multiple ? ngModel.$setViewValue(files) : ngModel.$setViewValue(files[0]);
+      scope.$parent.file = files[0];
+      scope.$apply(function () {
+      });
+      // reset container
+      container.empty();
 
-            // create container
-            container = angular.element( document.createElement('div') );
+      // check if there are files to read
+      if (files && files.length) {
 
-            // append before elem
-            elem.parent()[0].insertBefore(container[0], elem[0]);
+        // start the load process for each file
+        angular.forEach(files, function (data, index) {
 
-        } else {
+          // init variables
+          var $reader = new FileReader(), result, $mediaElement;
 
-            // get the container
-            container = angular.isElement(attrs.previewContainer) ? attrs.previewContainer : angular.element(document.getElementById(attrs.previewContainer));
-        }
+          // set fallback image on error
+          $reader.onloaderror = function (e) {
+            result = fallbackImage;
+          };
 
-        // add default class
-        container.addClass(containerClass);
+          // set resulting image
+          $reader.onload = function (e) {
+            result = e.target.result;
+          };
 
-        // the change function
-        function onChange(e) {
+          // when file reader has finished
+          // add the source to element and append it
+          $reader.onloadend = function (e) {
 
-            // get files from target
-            var files = $input[0].files;
-
-            // update model value
-            attrs.multiple ? ngModel.$setViewValue(files) : ngModel.$setViewValue(files[0]);
-
-            // reset container
-            container.empty();
-
-            // check if there are files to read
-            if( files && files.length ) {
-
-                // start the load process for each file
-                angular.forEach(files, function(data, index) {
-
-                    // init variables
-                    var $reader = new FileReader(), result, $mediaElement;
-
-                    // set fallback image on error
-                    $reader.onloaderror = function (e) {
-                        result = fallbackImage;
-                    }
-
-                    // set resulting image
-                    $reader.onload = function (e) {
-                        result = e.target.result;
-                    }
-
-                    // when file reader has finished
-                    // add the source to element and append it
-                    $reader.onloadend = function(e) {
-
-                        // if audio
-                        if( result.indexOf('data:audio') > -1 ) {
-
-                            $mediaElement = angular.element( document.createElement('audio') );
-                            $mediaElement.attr('controls', 'true');
-
-                        } else if( result.indexOf('data:video') > -1 ) {
-
-                            $mediaElement = angular.element( document.createElement('video') );
-                            $mediaElement.attr('controls', 'true');
-
-                        } else {
-
-                            $mediaElement = angular.element( document.createElement('img') );
-
-                        }
-
-                        // add the source
-                        $mediaElement.attr('src', result);
-                        // add the element class
-                        $mediaElement.addClass(previewClass);
-                        // append to the preview container
-                        container.append( $mediaElement );
-
-                    }
-
-                    // read file
-                    $reader.readAsDataURL( data );
-
-                });
-
+            // if audio
+            if ( result.indexOf('data:audio') > -1 ) {
+              $mediaElement = angular.element( document.createElement('audio') );
+              $mediaElement.attr('controls', 'true');
+            } else if ( result.indexOf('data:video') > -1 ) {
+              $mediaElement = angular.element( document.createElement('video') );
+              $mediaElement.attr('controls', 'true');
+            } else {
+              $mediaElement = angular.element( document.createElement('img') );
             }
 
-        }
+            // add the source
+            $mediaElement.attr('src', result);
+            // add the element class
+            $mediaElement.addClass(previewClass);
+            // append to the preview container
+            container.append( $mediaElement );
 
-        // clear the preview and the input on click
-        scope.clearPreview = function () {
-            // clear the input value
-            $input.val('');
-            // reset container
-            container.empty();
-        }
+          };
 
-        // bind change event
-        elem.on('change', onChange);
+          // read file
+          $reader.readAsDataURL( data );
 
-        // unbind event listener to prevent memory leaks
-        scope.$on('$destroy', function () {
-            elem.off('change', onChange);
         });
 
+      }
+
     }
+
+    // clear the preview and the input on click
+    scope.clearPreview = function () {
+      // clear the input value
+      $input.val('');
+      // clear model
+      scope.model = null;
+      scope.$parent.file = null;
+      container.empty();
+    };
+
+    // bind change event
+    elem.on('change', onChange);
+
+    // unbind event listener to prevent memory leaks
+    scope.$on('$destroy', function () {
+      elem.off('change', onChange);
+    });
+
+  }
 
 });
